@@ -1,0 +1,200 @@
+.stApp {
+    background: #F4F8FC;
+    color: #18324A;
+    font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+}
+
+[data-testid="stHeader"] {
+    background: #F4F8FC;
+    border-bottom: 1px solid #E1EAF2;
+}
+
+[data-testid="stSidebar"] {
+    background: #12304A;
+    border-right: 1px solid #0C2438;
+}
+
+[data-testid="stSidebar"] * {
+    color: #FFFFFF;
+}
+
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
+    color: #FFFFFF;
+}
+
+.block-container {
+    max-width: 1440px;
+    padding: 2rem 2rem 3rem;
+}
+
+h1, h2, h3 {
+    color: #12304A;
+    letter-spacing: -0.02em;
+}
+
+h1 {
+    font-weight: 700;
+}
+
+p, label, [data-testid="stCaptionContainer"] {
+    color: #18324A;
+}
+
+[data-testid="stMetric"] {
+    position: relative;
+    overflow: hidden;
+    background: #FFFFFF;
+    padding: 20px;
+    border: 1px solid #E1EAF2;
+    border-left: 4px solid #0D9488;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(18, 48, 74, 0.07);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+[data-testid="stMetric"]:hover {
+    box-shadow: 0 7px 18px rgba(18, 48, 74, 0.11);
+    transform: translateY(-1px);
+}
+
+[data-testid="stMetricLabel"] {
+    color: #526A7D;
+}
+
+[data-testid="stMetricValue"] {
+    color: #2563A6;
+    font-weight: 700;
+}
+
+[data-testid="stFileUploader"] {
+    background: #FFFFFF;
+    border: 1px dashed #91B3CC;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+[data-testid="stFileUploader"] label {
+    color: #18324A;
+}
+
+[data-testid="stFileUploader"] section {
+    background: #F4F8FC;
+    border-radius: 8px;
+}
+
+.stButton > button,
+.stDownloadButton > button {
+    border-radius: 8px;
+    font-weight: 600;
+    transition: background-color 0.15s ease, border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.stButton > button[kind="primary"] {
+    background: #0D9488;
+    color: #FFFFFF;
+    border: 1px solid #0D9488;
+}
+
+.stButton > button[kind="primary"]:hover {
+    background: #0B7F75;
+    color: #FFFFFF;
+    border-color: #0B7F75;
+    box-shadow: 0 3px 9px rgba(13, 148, 136, 0.2);
+}
+
+.stDownloadButton > button {
+    background: #2563A6;
+    color: #FFFFFF;
+    border: 1px solid #2563A6;
+}
+
+.stDownloadButton > button:hover {
+    background: #1D528D;
+    color: #FFFFFF;
+    border-color: #1D528D;
+    box-shadow: 0 3px 9px rgba(37, 99, 166, 0.18);
+}
+
+.stButton > button:not([kind="primary"]) {
+    color: #12304A;
+    border: 1px solid #B9CAD8;
+    background: #FFFFFF;
+}
+
+.stButton > button:not([kind="primary"]):hover {
+    color: #12304A;
+    border-color: #2563A6;
+    background: #DCEEFF;
+}
+
+.stButton > button p,
+.stDownloadButton > button p {
+    color: inherit;
+}
+
+[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+[data-testid="stTextInput"] input,
+[data-testid="stNumberInput"] input {
+    background: #FFFFFF;
+    border-color: #B9CAD8;
+    border-radius: 8px;
+    color: #18324A;
+}
+
+[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within {
+    border-color: #2563A6;
+    box-shadow: 0 0 0 1px #2563A6;
+}
+
+[data-baseweb="popover"] [role="listbox"],
+[data-baseweb="popover"] ul {
+    background: #FFFFFF;
+    border: 1px solid #D4E0E9;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(18, 48, 74, 0.14);
+}
+
+[data-baseweb="popover"] [role="option"],
+[data-baseweb="popover"] li {
+    background: #FFFFFF;
+    color: #18324A;
+}
+
+[data-baseweb="popover"] [role="option"]:hover,
+[data-baseweb="popover"] li:hover {
+    background: #DCEEFF;
+    color: #12304A;
+}
+
+[data-baseweb="popover"] [role="option"][aria-selected="true"],
+[data-baseweb="popover"] li[aria-selected="true"] {
+    background: #D7F5ED;
+    color: #12304A;
+    font-weight: 600;
+}
+
+[data-testid="stDataFrame"] {
+    border: 1px solid #E1EAF2;
+    border-radius: 10px;
+    box-shadow: 0 3px 12px rgba(18, 48, 74, 0.06);
+    overflow: hidden;
+}
+
+[data-testid="stAlert"] {
+    border-radius: 8px;
+}
+
+[data-testid="stAlert"] p {
+    color: #18324A;
+}
+
+@media (max-width: 768px) {
+    .block-container {
+        padding: 1.25rem 1rem 2rem;
+    }
+
+    [data-testid="stMetric"] {
+        padding: 14px;
+    }
+}

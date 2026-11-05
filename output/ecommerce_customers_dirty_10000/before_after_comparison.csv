@@ -1,0 +1,9 @@
+Problem,Before,After,IssuesResolved
+MissingName,105,105,0
+InvalidAge,694,694,0
+InvalidEmail,245,245,0
+MissingCity,128,128,0
+InvalidDate,90,90,0
+InvalidPurchase,367,367,0
+DuplicateRecord,224,224,0
+DuplicateCustomerID,224,224,0

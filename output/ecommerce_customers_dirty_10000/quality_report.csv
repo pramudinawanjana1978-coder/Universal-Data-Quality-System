@@ -1,0 +1,9 @@
+Problem,Count,Percentage
+MissingName,105,1.05
+InvalidAge,694,6.94
+InvalidEmail,245,2.45
+MissingCity,128,1.28
+InvalidDate,90,0.9
+InvalidPurchase,367,3.67
+DuplicateRecord,224,2.24
+DuplicateCustomerID,224,2.24

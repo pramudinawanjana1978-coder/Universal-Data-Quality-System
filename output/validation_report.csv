@@ -1,0 +1,9 @@
+Problem,Count
+MissingName,105
+InvalidAge,694
+InvalidEmail,245
+MissingCity,128
+InvalidDate,90
+InvalidPurchase,367
+DuplicateRecord,224
+DuplicateCustomerID,224
