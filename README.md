@@ -90,6 +90,17 @@ python -m streamlit run universal_app.py
 
 This project was developed to demonstrate practical skills in Python programming, data validation, data cleaning, exploratory data analysis, interactive visualization, and automated reporting.
 
+
+## Application Screenshots
+
+### Dashboard Overview
+
+![Dashboard Overview](screenshots/dashboard_overview.png)
+
+### Missing Values Analysis
+
+![Missing Values Analysis](screenshots/missing_values_analysis.png)
+
 ## Author
 
 Pramudi Nawanjana
