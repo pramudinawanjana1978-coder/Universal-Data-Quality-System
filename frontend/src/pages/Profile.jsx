@@ -1,69 +1,41 @@
-
 import { useState } from "react";
 import {
-  Database,
-  Columns3,
-  BarChart3,
-  Search,
-  AlertTriangle,
-  CheckCircle2,
-  Layers3,
-  FileSpreadsheet,
-  Download,
-  Activity,
-  TrendingUp,
-  TrendingDown,
-  Gauge,
+  Database, Columns3, BarChart3, Search, AlertTriangle,
+  CheckCircle2, Layers3, FileSpreadsheet, Download,
+  Activity, TrendingUp, TrendingDown, Gauge,
 } from "lucide-react";
 
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis,
+  CartesianGrid, Tooltip,
 } from "recharts";
 
-// FORMAT NUMBERS
 function formatNumber(value) {
   if (value === null || value === undefined) return "—";
-
   if (typeof value === "number") {
     return value.toLocaleString(undefined, {
       maximumFractionDigits: 2,
     });
   }
-
   return String(value);
 }
 
-// REUSABLE COMPACT KPI CARD
 function KPICard({
-  title,
-  value,
-  icon: Icon,
+  title, value, icon: Icon,
   iconBg = "bg-blue-50",
   iconColor = "text-blue-600",
   background = "bg-white",
 }) {
   return (
-    <div
-      className={`${background} rounded-2xl p-4 border border-slate-100 shadow-sm`}
-    >
+    <div className={`${background} rounded-2xl p-4 border border-slate-100 shadow-sm`}>
       <div className="flex items-center gap-3 mb-3">
-        <div
-          className={`w-10 h-10 shrink-0 rounded-xl ${iconBg} flex items-center justify-center`}
-        >
+        <div className={`w-10 h-10 shrink-0 rounded-xl ${iconBg} flex items-center justify-center`}>
           <Icon size={20} className={iconColor} />
         </div>
-
         <p className="text-sm font-semibold text-slate-600">
           {title}
         </p>
       </div>
-
       <p className="text-2xl font-bold text-[#172d51]">
         {formatNumber(value)}
       </p>
@@ -71,17 +43,10 @@ function KPICard({
   );
 }
 
-// DOWNLOAD OUTLIER CSV
 function downloadCSV(rows, filename) {
   if (!Array.isArray(rows) || rows.length === 0) return;
 
-  const headers = [
-    "Row Number",
-    "Column",
-    "Value",
-    "Status",
-  ];
-
+  const headers = ["Row Number", "Column", "Value", "Status"];
   const escapeCSV = (value) =>
     `"${String(value ?? "").replace(/"/g, '""')}"`;
 
@@ -98,38 +63,54 @@ function downloadCSV(rows, filename) {
 
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-
   link.href = url;
   link.download = filename;
-
   document.body.appendChild(link);
   link.click();
   link.remove();
-
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export default function Profile({
-  profile,
-  loading,
-  error,
-}) {
-  const [search, setSearch] = useState("");
-  const [
-    selectedOutlierColumn,
-    setSelectedOutlierColumn,
-  ] = useState("");
+const navItems = [
+  {
+    label: "Column Quality",
+    target: "profile-column-quality",
+    icon: Columns3,
+  },
+  {
+    label: "Statistics",
+    target: "profile-statistics",
+    icon: BarChart3,
+  },
+  {
+    label: "Outliers",
+    target: "profile-outliers",
+    icon: Activity,
+  },
+];
 
-  // LOADING
+export default function Profile({ profile, loading, error }) {
+  const [search, setSearch] = useState("");
+  const [selectedOutlierColumn, setSelectedOutlierColumn] =
+    useState("");
+
+  const [activeSection, setActiveSection] = useState("");
+
+  function navigateToSection(target) {
+    setActiveSection(target);
+    document.getElementById(target)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+
   if (loading) {
     return (
       <div className="bg-white rounded-3xl p-12 text-center shadow-sm">
         <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mx-auto mb-5" />
-
         <h2 className="text-xl font-bold text-[#172d51]">
           Analyzing Dataset...
         </h2>
-
         <p className="text-slate-500 mt-2 text-sm">
           Preparing your data profiling report.
         </p>
@@ -137,7 +118,6 @@ export default function Profile({
     );
   }
 
-  // ERROR
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-3xl p-8 text-center">
@@ -145,17 +125,14 @@ export default function Profile({
           size={36}
           className="text-red-500 mx-auto mb-4"
         />
-
         <h2 className="text-xl font-bold text-red-700">
           Unable to Load Data Profile
         </h2>
-
         <p className="text-red-600 mt-3">{error}</p>
       </div>
     );
   }
 
-  // NO DATA
   if (!profile) {
     return (
       <div className="bg-white rounded-3xl p-12 text-center shadow-sm">
@@ -163,37 +140,29 @@ export default function Profile({
           size={40}
           className="mx-auto mb-4 text-blue-600"
         />
-
         <h2 className="text-2xl font-bold text-[#172d51]">
           Data Profiling
         </h2>
-
         <p className="text-slate-500 mt-3">
-          Upload a CSV dataset from Home to explore
-          your data.
+          Upload a CSV dataset from Home to explore your data.
         </p>
       </div>
     );
   }
 
-  // PROFILE DATA
   const columns = Array.isArray(profile.columns)
-    ? profile.columns
-    : [];
+    ? profile.columns : [];
 
   const statistics = Array.isArray(profile.statistics)
-    ? profile.statistics
-    : [];
+    ? profile.statistics : [];
 
   const outliers = Array.isArray(profile.outliers)
-    ? profile.outliers
-    : [];
+    ? profile.outliers : [];
 
   const outlierDetails = profile.outlier_details || {};
 
   const totalMissing = columns.reduce(
-    (sum, col) => sum + Number(col.missing || 0),
-    0
+    (sum, col) => sum + Number(col.missing || 0), 0
   );
 
   const columnsWithMissing = columns.filter(
@@ -201,9 +170,9 @@ export default function Profile({
   ).length;
 
   const filteredColumns = columns.filter((col) =>
-    String(col.name || "")
-      .toLowerCase()
-      .includes(search.toLowerCase())
+    String(col.name || "").toLowerCase().includes(
+      search.toLowerCase()
+    )
   );
 
   const chartData = [...columns]
@@ -215,7 +184,6 @@ export default function Profile({
     )
     .slice(0, 10);
 
-  // OUTLIER DATA
   const activeOutlierColumn = outliers.some(
     (item) => item.Column === selectedOutlierColumn
   )
@@ -234,8 +202,7 @@ export default function Profile({
 
   const totalOutliers = outliers.reduce(
     (sum, item) =>
-      sum + Number(item["Outlier Count"] || 0),
-    0
+      sum + Number(item["Outlier Count"] || 0), 0
   );
 
   const columnsWithOutliers = outliers.filter(
@@ -269,6 +236,32 @@ export default function Profile({
         </span>
       </div>
 
+      {/* QUICK NAVIGATION */}
+      <nav
+        aria-label="Profile section navigation"
+        className="sticky top-2 z-20 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-3 shadow-sm"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+         
+
+          {navItems.map(({ label, target, icon: Icon }) => (
+            <button
+              key={target}
+              type="button"
+              onClick={() => navigateToSection(target)}
+              className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                activeSection === target
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-slate-50 text-slate-700 hover:bg-blue-50 hover:text-blue-700"
+              }`}
+            >
+              <Icon size={17} className="shrink-0" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </nav>
+
       {/* MAIN KPI CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KPICard
@@ -278,7 +271,6 @@ export default function Profile({
           iconBg="bg-blue-50"
           iconColor="text-blue-600"
         />
-
         <KPICard
           title="Total Columns"
           value={columns.length}
@@ -286,7 +278,6 @@ export default function Profile({
           iconBg="bg-violet-50"
           iconColor="text-violet-600"
         />
-
         <KPICard
           title="Missing Cells"
           value={totalMissing}
@@ -294,7 +285,6 @@ export default function Profile({
           iconBg="bg-orange-50"
           iconColor="text-orange-600"
         />
-
         <KPICard
           title="Columns with Missing"
           value={columnsWithMissing}
@@ -308,12 +298,8 @@ export default function Profile({
       <section className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-            <BarChart3
-              size={20}
-              className="text-blue-600"
-            />
+            <BarChart3 size={20} className="text-blue-600" />
           </div>
-
           <h3 className="text-lg font-bold text-[#172d51]">
             Missing Values Distribution
           </h3>
@@ -329,10 +315,7 @@ export default function Profile({
               <BarChart
                 data={chartData}
                 margin={{
-                  top: 10,
-                  right: 15,
-                  left: 0,
-                  bottom: 60,
+                  top: 10, right: 15, left: 0, bottom: 60,
                 }}
               >
                 <CartesianGrid
@@ -340,7 +323,6 @@ export default function Profile({
                   vertical={false}
                   stroke="#e2e8f0"
                 />
-
                 <XAxis
                   dataKey="name"
                   angle={-30}
@@ -349,19 +331,13 @@ export default function Profile({
                   interval={0}
                   tick={{ fontSize: 11 }}
                 />
-
-                <YAxis
-                  unit="%"
-                  tick={{ fontSize: 11 }}
-                />
-
+                <YAxis unit="%" tick={{ fontSize: 11 }} />
                 <Tooltip
                   formatter={(value) => [
                     `${formatNumber(value)}%`,
                     "Missing Values",
                   ]}
                 />
-
                 <Bar
                   dataKey="missing_percentage"
                   fill="#3478ef"
@@ -373,34 +349,29 @@ export default function Profile({
           </div>
         ) : (
           <div className="bg-green-50 text-green-700 rounded-xl p-8 text-center">
-            <CheckCircle2
-              size={30}
-              className="mx-auto mb-3"
-            />
+            <CheckCircle2 size={30} className="mx-auto mb-3" />
             No Missing Values Detected
           </div>
         )}
       </section>
 
       {/* COLUMN QUALITY REPORT */}
-      <section className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+      <section
+        id="profile-column-quality"
+        className="scroll-mt-28 bg-white rounded-2xl p-5 border border-slate-100 shadow-sm"
+      >
         <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
           <div>
             <h3 className="text-lg font-bold text-[#172d51]">
               Column Quality Report
             </h3>
-
             <p className="text-sm text-slate-500 mt-1">
               Detailed information about dataset columns.
             </p>
           </div>
 
           <div className="flex items-center gap-2 bg-slate-100 rounded-xl px-4 py-3">
-            <Search
-              size={17}
-              className="text-slate-400"
-            />
-
+            <Search size={17} className="text-slate-400" />
             <input
               type="text"
               value={search}
@@ -433,47 +404,44 @@ export default function Profile({
                   <td className="p-3 font-semibold text-[#172d51]">
                     {col.name}
                   </td>
-
                   <td className="p-3">
                     <span className="bg-slate-100 px-3 py-1 rounded-lg text-xs">
                       {col.type}
                     </span>
                   </td>
-
                   <td className="p-3">
                     {formatNumber(col.missing)}
                   </td>
-
                   <td className="p-3 min-w-40">
                     <div className="flex items-center gap-3">
                       <div className="w-20 h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full ${
-                            col.missing_percentage > 20
+                            Number(col.missing_percentage) > 20
                               ? "bg-red-500"
-                              : col.missing_percentage > 0
+                              : Number(col.missing_percentage) > 0
                               ? "bg-orange-400"
                               : "bg-green-500"
                           }`}
                           style={{
                             width: `${Math.min(
-                              Number(col.missing_percentage) || 0,
+                              Math.max(
+                                Number(col.missing_percentage) || 0,
+                                0
+                              ),
                               100
                             )}%`,
                           }}
                         />
                       </div>
-
                       <span className="text-xs font-medium">
                         {formatNumber(col.missing_percentage)}%
                       </span>
                     </div>
                   </td>
-
                   <td className="p-3">
                     {formatNumber(col.unique)}
                   </td>
-
                   <td className="p-3">
                     {Number(col.missing) > 0 ? (
                       <span className="inline-flex items-center gap-1 bg-orange-50 text-orange-700 px-3 py-1 rounded-full text-xs font-semibold">
@@ -501,15 +469,14 @@ export default function Profile({
       </section>
 
       {/* NUMERICAL STATISTICS */}
-      <section className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+      <section
+        id="profile-statistics"
+        className="scroll-mt-28 bg-white rounded-2xl p-5 border border-slate-100 shadow-sm"
+      >
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 bg-violet-50 rounded-xl flex items-center justify-center">
-            <BarChart3
-              size={20}
-              className="text-violet-600"
-            />
+            <BarChart3 size={20} className="text-violet-600" />
           </div>
-
           <h3 className="text-lg font-bold text-[#172d51]">
             Numerical Statistics
           </h3>
@@ -541,19 +508,15 @@ export default function Profile({
                     <td className="p-3 font-semibold text-[#172d51]">
                       {item.column}
                     </td>
-
                     <td className="p-3">
                       {formatNumber(item.mean)}
                     </td>
-
                     <td className="p-3">
                       {formatNumber(item.median)}
                     </td>
-
                     <td className="p-3">
                       {formatNumber(item.minimum)}
                     </td>
-
                     <td className="p-3">
                       {formatNumber(item.maximum)}
                     </td>
@@ -570,21 +533,19 @@ export default function Profile({
       </section>
 
       {/* IQR OUTLIER DETECTION */}
-      <section className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+      <section
+        id="profile-outliers"
+        className="scroll-mt-28 bg-white rounded-2xl p-5 border border-slate-100 shadow-sm"
+      >
         <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 bg-orange-50 rounded-xl flex items-center justify-center">
-              <Activity
-                size={22}
-                className="text-orange-600"
-              />
+              <Activity size={22} className="text-orange-600" />
             </div>
-
             <div>
               <h3 className="text-lg font-bold text-[#172d51]">
                 IQR Outlier Detection
               </h3>
-
               <p className="text-sm text-slate-500 mt-1">
                 Detect unusual numerical values using
                 the Interquartile Range method.
@@ -607,7 +568,6 @@ export default function Profile({
             iconColor="text-orange-600"
             background="bg-orange-50"
           />
-
           <KPICard
             title="Columns with Outliers"
             value={columnsWithOutliers}
@@ -646,7 +606,6 @@ export default function Profile({
                       <td className="p-3 font-semibold text-[#172d51]">
                         {item.Column}
                       </td>
-
                       <td className="p-3">
                         <span
                           className={
@@ -658,15 +617,12 @@ export default function Profile({
                           {formatNumber(item["Outlier Count"])}
                         </span>
                       </td>
-
                       <td className="p-3">
                         {formatNumber(item["Outlier %"])}%
                       </td>
-
                       <td className="p-3">
                         {formatNumber(item["Lower Bound"])}
                       </td>
-
                       <td className="p-3">
                         {formatNumber(item["Upper Bound"])}
                       </td>
@@ -676,7 +632,7 @@ export default function Profile({
               </table>
             </div>
 
-            {/* SELECT COLUMN */}
+            {/* SELECT OUTLIER COLUMN */}
             <div className="mt-7">
               <label
                 htmlFor="outlier-column"
@@ -715,7 +671,6 @@ export default function Profile({
                   iconColor="text-orange-600"
                   background="bg-slate-50"
                 />
-
                 <KPICard
                   title="Lower Bound"
                   value={selectedOutlier["Lower Bound"]}
@@ -724,7 +679,6 @@ export default function Profile({
                   iconColor="text-blue-600"
                   background="bg-slate-50"
                 />
-
                 <KPICard
                   title="Upper Bound"
                   value={selectedOutlier["Upper Bound"]}
@@ -743,7 +697,6 @@ export default function Profile({
                   <h4 className="text-lg font-bold text-[#172d51]">
                     Outlier Details
                   </h4>
-
                   <p className="text-sm text-slate-500 mt-1">
                     Individual values flagged for review.
                   </p>
@@ -751,6 +704,7 @@ export default function Profile({
 
                 {selectedDetails.length > 0 && (
                   <button
+                    type="button"
                     onClick={() =>
                       downloadCSV(
                         selectedDetails,
@@ -786,15 +740,12 @@ export default function Profile({
                           <td className="p-3">
                             {item["Row Number"]}
                           </td>
-
                           <td className="p-3 font-medium">
                             {item.Column}
                           </td>
-
                           <td className="p-3">
                             {formatNumber(item.Value)}
                           </td>
-
                           <td className="p-3">
                             <span className="bg-orange-50 text-orange-700 px-3 py-1 rounded-full text-xs font-semibold">
                               Review
@@ -811,7 +762,6 @@ export default function Profile({
                     size={30}
                     className="mx-auto mb-3"
                   />
-
                   <p className="font-semibold">
                     No outliers detected in this column.
                   </p>
@@ -825,11 +775,9 @@ export default function Profile({
               size={30}
               className="text-green-600 mx-auto mb-3"
             />
-
             <p className="font-semibold text-[#172d51]">
               No suitable numeric columns for IQR analysis.
             </p>
-
             <p className="text-sm text-slate-500 mt-2">
               The Python IQR method requires suitable
               numeric data with sufficient variation.
