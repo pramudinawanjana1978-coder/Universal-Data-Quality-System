@@ -14,6 +14,7 @@ from fastapi import (
     UploadFile,
     HTTPException,
 )
+from fastapi import Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -36,6 +37,11 @@ from universal_cleaner import (
     validate_data_rules,
 )
 
+
+app = FastAPI(
+    title="DataQuality 360 API",
+    version="1.0.0"
+)
 
 # -----------------------------------------
 # FASTAPI APPLICATION
@@ -61,11 +67,13 @@ app.add_middleware(
         "http://127.0.0.1:5174",
         "http://localhost:5175",
         "http://127.0.0.1:5175",
+        "https://universal-data-quality-system.vercel.app",
     ],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 # -----------------------------------------
@@ -666,3 +674,276 @@ def get_dataset_rows(
         "total_pages": total_pages,
         "rows": records(page_df),
     }
+
+@app.post("/api/validate-file")
+async def validate_uploaded_file(
+    file: UploadFile = File(...)
+):
+    df = await read_csv(file)
+
+    validation_report = validate_data_rules(df)
+
+    if validation_report.empty:
+        return {
+            "total_issues": 0,
+            "issue_summary": [],
+            "issues": []
+        }
+
+    issue_summary = (
+        validation_report["Issue"]
+        .value_counts()
+        .reset_index()
+    )
+
+    issue_summary.columns = [
+        "Issue Type",
+        "Count"
+    ]
+
+    return {
+        "total_issues": len(validation_report),
+        "issue_summary": records(issue_summary),
+        "issues": records(validation_report)
+    }
+
+@app.post("/api/recommendations-file")
+async def recommendations_file(
+    file: UploadFile = File(...)
+):
+    df = await read_csv(file)
+
+    report = recommend_cleaning_methods(df)
+    missing_columns = []
+
+    for column in df.columns:
+        missing_count = int(df[column].isna().sum())
+
+        if missing_count == 0:
+            continue
+
+        numeric = pd.api.types.is_numeric_dtype(
+            df[column]
+        )
+
+        if numeric:
+            methods = [
+                "Keep Missing",
+                "Mean",
+                "Median",
+                "Mode"
+            ]
+        else:
+            methods = [
+                "Keep Missing",
+                "Mode",
+                "Unknown"
+            ]
+
+        missing_columns.append({
+            "column": str(column),
+            "missing": missing_count,
+            "type": "numeric" if numeric else "text",
+            "methods": methods
+        })
+
+    return {
+        "recommendations": records(report),
+        "missing_columns": missing_columns
+    }
+
+import json
+
+@app.post("/api/clean-file")
+async def clean_uploaded_file(
+    file: UploadFile = File(...),
+    trim_spaces: bool = Form(True),
+    remove_duplicates: bool = Form(False),
+    cleaning_rules: str = Form("{}")
+):
+    df = await read_csv(file)
+
+    try:
+        rules = json.loads(cleaning_rules)
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid cleaning rules."
+        )
+
+    if not isinstance(rules, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="Cleaning rules must be an object."
+        )
+
+    allowed_methods = {
+        "Keep Missing", "Mean", "Median",
+        "Mode", "Unknown"
+    }
+
+    for column, method in rules.items():
+        if column not in df.columns:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown column: {column}"
+            )
+
+        if method not in allowed_methods:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid cleaning method: {method}"
+            )
+
+        numeric = pd.api.types.is_numeric_dtype(
+            df[column]
+        )
+
+        if numeric and method == "Unknown":
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown is invalid for {column}"
+            )
+
+        if not numeric and method in ("Mean", "Median"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"{method} is invalid for {column}"
+            )
+
+    cleaned, audit = clean_data(
+        df,
+        trim_spaces=trim_spaces,
+        remove_duplicates=remove_duplicates,
+        fill_missing=False
+    )
+
+    cleaned, missing_audit = clean_missing_values(
+        cleaned, rules
+    )
+
+    audit = pd.concat(
+        [audit, missing_audit],
+        ignore_index=True
+    )
+
+    before_summary, _ = analyze_data(df)
+    after_summary, after_report = analyze_data(cleaned)
+
+    comparison = [
+        {
+            "metric": "Total Records",
+            "before": before_summary["total_rows"],
+            "after": after_summary["total_rows"]
+        },
+        {
+            "metric": "Missing Cells",
+            "before": before_summary["missing_cells"],
+            "after": after_summary["missing_cells"]
+        },
+        {
+            "metric": "Duplicate Rows",
+            "before": before_summary["duplicate_rows"],
+            "after": after_summary["duplicate_rows"]
+        }
+    ]
+
+    return {
+        "before_score": calculate_quality_score(df),
+        "after_score": calculate_quality_score(cleaned),
+        "comparison": comparison,
+        "cleaned_preview": records(cleaned.head(10)),
+        "audit_count": len(audit),
+        "audit": records(audit.head(100)),
+        "quality_report": records(after_report)
+    }
+
+@app.post("/api/download-file/{report_type}")
+async def download_file_report(
+    report_type: str,
+    file: UploadFile = File(...),
+    trim_spaces: bool = Form(True),
+    remove_duplicates: bool = Form(False),
+    cleaning_rules: str = Form("{}")
+):
+    df = await read_csv(file)
+
+    try:
+        rules = json.loads(cleaning_rules)
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid cleaning rules."
+        )
+
+    if not isinstance(rules, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="Cleaning rules must be an object."
+        )
+
+    allowed_methods = {
+        "Keep Missing", "Mean", "Median",
+        "Mode", "Unknown"
+    }
+
+    for column, method in rules.items():
+        if column not in df.columns or method not in allowed_methods:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid cleaning rule."
+            )
+
+        numeric = pd.api.types.is_numeric_dtype(df[column])
+
+        if (numeric and method == "Unknown") or (
+            not numeric and method in ("Mean", "Median")
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid cleaning method for {column}"
+            )
+
+    cleaned, audit = clean_data(
+        df,
+        trim_spaces=trim_spaces,
+        remove_duplicates=remove_duplicates,
+        fill_missing=False
+    )
+
+    cleaned, missing_audit = clean_missing_values(
+        cleaned, rules
+    )
+
+    audit = pd.concat(
+        [audit, missing_audit],
+        ignore_index=True
+    )
+
+    if report_type == "cleaned":
+        output = cleaned.to_csv(index=False)
+        filename = "cleaned_dataset.csv"
+
+    elif report_type == "quality":
+        _, quality_report = analyze_data(cleaned)
+        output = quality_report.to_csv(index=False)
+        filename = "quality_report.csv"
+
+    elif report_type == "audit":
+        output = audit.to_csv(index=False)
+        filename = "audit_log.csv"
+
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Unknown report type."
+        )
+
+    return StreamingResponse(
+        iter([output.encode("utf-8-sig")]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition":
+                f'attachment; filename="{filename}"'
+        }
+    )

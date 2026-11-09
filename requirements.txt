@@ -1,4 +1,9 @@
-streamlit
+
+fastapi
+uvicorn
+python-multipart
 pandas
+numpy
 plotly
 reportlab
+streamlit

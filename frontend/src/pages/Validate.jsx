@@ -20,7 +20,11 @@ import {
   Tooltip,
 } from "recharts";
 
-const API_URL = "http://127.0.0.1:8000";
+
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? "" : "http://127.0.0.1:8000");
+
 
 function formatNumber(value) {
   return Number(value || 0).toLocaleString();

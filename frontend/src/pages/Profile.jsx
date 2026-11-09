@@ -383,82 +383,76 @@ export default function Profile({ profile, loading, error }) {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr>
-                <th className="p-3">Column Name</th>
-                <th className="p-3">Data Type</th>
-                <th className="p-3">Missing Count</th>
-                <th className="p-3">Missing %</th>
-                <th className="p-3">Unique Values</th>
-                <th className="p-3">Status</th>
-              </tr>
-            </thead>
+            
+<table className="w-full text-sm text-left">
+  <thead className="bg-slate-50 text-slate-600">
+    <tr>
+      <th className="p-3">Column Name</th>
+      <th className="p-3">Data Type</th>
+      <th className="p-3">Missing Count</th>
+      <th className="p-3">Missing %</th>
+      <th className="p-3">Unique Values</th>
+      <th className="p-3">Status</th>
+    </tr>
+  </thead>
 
-            <tbody>
-              {filteredColumns.map((col) => (
-                <tr
-                  key={col.name}
-                  className="border-b border-slate-100 hover:bg-slate-50"
-                >
-                  <td className="p-3 font-semibold text-[#172d51]">
-                    {col.name}
-                  </td>
-                  <td className="p-3">
-                    <span className="bg-slate-100 px-3 py-1 rounded-lg text-xs">
-                      {col.type}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    {formatNumber(col.missing)}
-                  </td>
-                  <td className="p-3 min-w-40">
-                    <div className="flex items-center gap-3">
-                      <div className="w-20 h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${
-                            Number(col.missing_percentage) > 20
-                              ? "bg-red-500"
-                              : Number(col.missing_percentage) > 0
-                              ? "bg-orange-400"
-                              : "bg-green-500"
-                          }`}
-                          style={{
-                            width: `${Math.min(
-                              Math.max(
-                                Number(col.missing_percentage) || 0,
-                                0
-                              ),
-                              100
-                            )}%`,
-                          }}
-                        />
-                      </div>
-                      <span className="text-xs font-medium">
-                        {formatNumber(col.missing_percentage)}%
-                      </span>
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    {formatNumber(col.unique)}
-                  </td>
-                  <td className="p-3">
-                    {Number(col.missing) > 0 ? (
-                      <span className="inline-flex items-center gap-1 bg-orange-50 text-orange-700 px-3 py-1 rounded-full text-xs font-semibold">
-                        <AlertTriangle size={13} />
-                        Missing
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">
-                        <CheckCircle2 size={13} />
-                        Complete
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+  <tbody>
+    {filteredColumns.map((col) => (
+      <tr
+        key={col.name}
+        className="border-b border-slate-100 hover:bg-slate-50"
+      >
+        <td className="p-3 font-semibold text-[#172d51]">
+          {col.name}
+        </td>
+
+        <td className="p-3">
+          <span className="bg-slate-100 px-3 py-1 rounded-lg text-xs">
+            {col.type}
+          </span>
+        </td>
+
+        <td className="p-3">
+          {formatNumber(col.missing)}
+        </td>
+
+        {/* MISSING PERCENTAGE - NO PROGRESS BAR */}
+        <td className="p-3">
+          <span
+            className={`text-sm font-semibold ${
+              Number(col.missing_percentage) > 20
+                ? "text-red-600"
+                : Number(col.missing_percentage) > 0
+                ? "text-orange-600"
+                : "text-green-600"
+            }`}
+          >
+            {formatNumber(col.missing_percentage)}%
+          </span>
+        </td>
+
+        <td className="p-3">
+          {formatNumber(col.unique)}
+        </td>
+
+        <td className="p-3">
+          {Number(col.missing) > 0 ? (
+            <span className="inline-flex items-center gap-1 bg-orange-50 text-orange-700 px-3 py-1 rounded-full text-xs font-semibold">
+              <AlertTriangle size={13} />
+              Missing
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">
+              <CheckCircle2 size={13} />
+              Complete
+            </span>
+          )}
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
 
           {filteredColumns.length === 0 && (
             <p className="text-center py-8 text-slate-500">

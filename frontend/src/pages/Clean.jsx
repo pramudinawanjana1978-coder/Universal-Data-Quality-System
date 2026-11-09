@@ -2,160 +2,20 @@
 import { useEffect, useState } from "react";
 import {
   WandSparkles,
-  CheckCircle2,
-  AlertTriangle,
   Download,
-  RefreshCw,
+  AlertTriangle,
   Database,
-  Lightbulb,
+  RefreshCw,
   Sparkles,
-  FileSpreadsheet,
-  ArrowRight,
-  Info,
 } from "lucide-react";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? "" : "http://127.0.0.1:8000");
 
-const VALID_METHODS = [
-  "Keep Missing",
-  "Mean",
-  "Median",
-  "Mode",
-  "Unknown",
-];
-
-function formatNumber(value) {
-  if (value === null || value === undefined) return "—";
-
-  return typeof value === "number"
-    ? value.toLocaleString(undefined, {
-        maximumFractionDigits: 2,
-      })
-    : String(value);
-}
-
-function normalizeMethod(value) {
-  if (value === null || value === undefined) return null;
-
-  const text = String(value).trim().toLowerCase();
-
-  const aliases = {
-    mean: "Mean",
-    median: "Median",
-    mode: "Mode",
-    unknown: "Unknown",
-    "keep missing": "Keep Missing",
-    "keep as missing": "Keep Missing",
-    "leave missing": "Keep Missing",
-    "do nothing": "Keep Missing",
-    "no cleaning": "Keep Missing",
-  };
-
-  return aliases[text] || null;
-}
-
-function getField(row, possibleKeys) {
-  if (!row || typeof row !== "object") return null;
-
-  for (const key of possibleKeys) {
-    if (row[key] !== undefined && row[key] !== null) {
-      return row[key];
-    }
-  }
-
-  const entries = Object.entries(row);
-
-  for (const key of possibleKeys) {
-    const match = entries.find(
-      ([name]) =>
-        name.trim().toLowerCase() === key.trim().toLowerCase()
-    );
-
-    if (match) return match[1];
-  }
-
-  return null;
-}
-
-function getRecommendationColumn(row) {
-  return getField(row, [
-    "Column",
-    "column",
-    "Column Name",
-    "column_name",
-    "name",
-  ]);
-}
-
-function getRecommendationMethod(row) {
-  const direct = getField(row, [
-    "Recommended Method",
-    "Recommended Cleaning Method",
-    "Recommended",
-    "Recommendation",
-    "Suggested Method",
-    "Cleaning Method",
-    "Method",
-    "recommended_method",
-    "recommended_cleaning_method",
-    "suggested_method",
-  ]);
-
-  const normalized = normalizeMethod(direct);
-
-  if (normalized) return normalized;
-
-  if (typeof direct === "string") {
-    const text = direct.toLowerCase();
-
-    if (
-      text.includes("manual review") ||
-      text.includes("keep missing") ||
-      text.includes("leave missing")
-    ) {
-      return "Keep Missing";
-    }
-
-    for (const method of [
-      "Median",
-      "Mean",
-      "Mode",
-      "Unknown",
-    ]) {
-      const pattern = new RegExp(
-        `\\b${method.toLowerCase()}\\b`,
-        "i"
-      );
-
-      if (pattern.test(text)) return method;
-    }
-  }
-
-  return null;
-}
-
-function getRecommendationReason(row) {
-  const reason = getField(row, [
-    "Reason",
-    "Explanation",
-    "Description",
-    "Rationale",
-    "Why",
-    "Notes",
-    "reason",
-    "explanation",
-  ]);
-
-  return reason === null ? "" : String(reason);
-}
-
-function DataTable({ rows, emptyMessage }) {
+function DataTable({ rows = [] }) {
   if (!Array.isArray(rows) || rows.length === 0) {
-    return (
-      <p className="text-sm text-slate-500 py-5">
-        {emptyMessage}
-      </p>
-    );
+    return <p className="text-slate-500">No data available.</p>;
   }
 
   const columns = Object.keys(rows[0]);
@@ -166,31 +26,18 @@ function DataTable({ rows, emptyMessage }) {
         <thead className="bg-slate-50">
           <tr>
             {columns.map((column) => (
-              <th
-                key={column}
-                className="p-4 font-semibold text-slate-600 whitespace-nowrap"
-              >
+              <th key={column} className="p-3 whitespace-nowrap">
                 {column}
               </th>
             ))}
           </tr>
         </thead>
-
         <tbody>
           {rows.map((row, index) => (
-            <tr
-              key={index}
-              className="border-b border-slate-100"
-            >
+            <tr key={index} className="border-b">
               {columns.map((column) => (
-                <td
-                  key={column}
-                  className="p-4 text-slate-600 whitespace-nowrap"
-                >
-                  {row[column] === null ||
-                  row[column] === undefined
-                    ? "—"
-                    : String(row[column])}
+                <td key={column} className="p-3 whitespace-nowrap">
+                  {row[column] == null ? "—" : String(row[column])}
                 </td>
               ))}
             </tr>
@@ -201,20 +48,18 @@ function DataTable({ rows, emptyMessage }) {
   );
 }
 
-export default function Clean({ datasetId }) {
+export default function Clean({ uploadedFile }) {
   const [trimSpaces, setTrimSpaces] = useState(true);
   const [removeDuplicates, setRemoveDuplicates] = useState(false);
-
   const [rules, setRules] = useState({});
   const [recommendations, setRecommendations] = useState([]);
   const [missingColumns, setMissingColumns] = useState([]);
-
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [preparing, setPreparing] = useState(false);
+  const [downloading, setDownloading] = useState("");
   const [error, setError] = useState("");
 
-  // LOAD PYTHON RECOMMENDATIONS
   useEffect(() => {
     setResult(null);
     setRules({});
@@ -224,7 +69,7 @@ export default function Clean({ datasetId }) {
     setTrimSpaces(true);
     setRemoveDuplicates(false);
 
-    if (!datasetId) return;
+    if (!uploadedFile) return;
 
     const controller = new AbortController();
 
@@ -232,41 +77,31 @@ export default function Clean({ datasetId }) {
       setPreparing(true);
 
       try {
+        const formData = new FormData();
+        formData.append("file", uploadedFile);
+
         const response = await fetch(
-          `${API_URL}/api/recommendations/${encodeURIComponent(
-            datasetId
-          )}`,
-          { signal: controller.signal }
+          `${API_URL}/api/recommendations-file`,
+          {
+            method: "POST",
+            body: formData,
+            signal: controller.signal,
+          }
         );
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(
-            typeof data.detail === "string"
-              ? data.detail
-              : "Unable to load cleaning recommendations."
-          );
+          throw new Error(data.detail || "Recommendations failed.");
         }
 
         if (!controller.signal.aborted) {
-          setRecommendations(
-            Array.isArray(data.recommendations)
-              ? data.recommendations
-              : []
-          );
-
-          setMissingColumns(
-            Array.isArray(data.missing_columns)
-              ? data.missing_columns
-              : []
-          );
+          setRecommendations(data.recommendations || []);
+          setMissingColumns(data.missing_columns || []);
         }
       } catch (err) {
         if (!controller.signal.aborted) {
-          setError(
-            err.message || "Failed to load recommendations."
-          );
+          setError(err.message);
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -276,78 +111,81 @@ export default function Clean({ datasetId }) {
     }
 
     loadRecommendations();
-
     return () => controller.abort();
-  }, [datasetId]);
+  }, [uploadedFile]);
 
-  function findRecommendation(columnName) {
-    return recommendations.find(
-      (row) =>
-        String(getRecommendationColumn(row) ?? "")
-          .trim()
-          .toLowerCase() ===
-        String(columnName).trim().toLowerCase()
+  function createFormData() {
+    const formData = new FormData();
+
+    formData.append("file", uploadedFile);
+    formData.append("trim_spaces", String(trimSpaces));
+    formData.append(
+      "remove_duplicates",
+      String(removeDuplicates)
     );
+
+    const selectedRules = Object.fromEntries(
+      Object.entries(rules).filter(
+        ([, method]) => method && method !== "Keep Missing"
+      )
+    );
+
+    formData.append(
+      "cleaning_rules",
+      JSON.stringify(selectedRules)
+    );
+
+    return formData;
   }
 
-  function getAvailableMethods(column) {
-    const numeric = column.type === "numeric";
+  function getRecommendation(columnName) {
+    return recommendations.find((item) => {
+      const name =
+        item.Column ??
+        item.column ??
+        item["Column Name"] ??
+        item.column_name;
 
-    const defaults = numeric
+      return String(name || "").toLowerCase() ===
+        String(columnName).toLowerCase();
+    });
+  }
+
+  function getSuggestedMethod(item) {
+    if (!item) return null;
+
+    const value = String(
+      item["Recommended Method"] ??
+      item["Recommended Cleaning Method"] ??
+      item.Recommendation ??
+      item.Method ??
+      item.recommended_method ??
+      ""
+    ).toLowerCase();
+
+    for (const method of ["Median", "Mean", "Mode", "Unknown"]) {
+      if (value.includes(method.toLowerCase())) return method;
+    }
+
+    return null;
+  }
+
+  function availableMethods(column) {
+    return column.type === "numeric"
       ? ["Keep Missing", "Mean", "Median", "Mode"]
       : ["Keep Missing", "Mode", "Unknown"];
-
-    const source = Array.isArray(column.methods)
-      ? column.methods
-      : defaults;
-
-    const methods = source
-      .map(normalizeMethod)
-      .filter(
-        (method) =>
-          method &&
-          VALID_METHODS.includes(method) &&
-          (numeric
-            ? method !== "Unknown"
-            : method !== "Mean" && method !== "Median")
-      );
-
-    return [...new Set(["Keep Missing", ...methods])];
-  }
-
-  function applySuggestion(columnName, method) {
-    setRules((previous) => ({
-      ...previous,
-      [columnName]: method,
-    }));
-
-    setResult(null);
   }
 
   function applyAllSuggestions() {
     const updated = { ...rules };
 
     missingColumns.forEach((column) => {
-      const name =
-        typeof column === "string"
-          ? column
-          : column.column ??
-            column.Column ??
-            column.name;
-
-      if (!name) return;
-
-      const recommendation = findRecommendation(name);
-      const method = getRecommendationMethod(recommendation);
-
-      const available = getAvailableMethods(
-        typeof column === "string"
-          ? { type: "text" }
-          : column
+      const suggestion = getSuggestedMethod(
+        getRecommendation(column.column)
       );
 
-      if (method && available.includes(method)) {
-        updated[name] = method;
+      if (suggestion && availableMethods(column).includes(suggestion)) {
+        updated[column.column] = suggestion;
       }
     });
 
@@ -355,42 +193,23 @@ export default function Clean({ datasetId }) {
     setResult(null);
   }
 
-  // RUN ORIGINAL PYTHON CLEANING ALGORITHMS
   async function runCleaning() {
-    if (!datasetId || loading) return;
+    if (!uploadedFile || loading) return;
 
     setLoading(true);
     setError("");
     setResult(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/clean`, {
+      const response = await fetch(`${API_URL}/api/clean-file`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          dataset_id: datasetId,
-          trim_spaces: trimSpaces,
-          remove_duplicates: removeDuplicates,
-          cleaning_rules: Object.fromEntries(
-            Object.entries(rules).filter(
-              ([, method]) =>
-                method &&
-                method !== "Keep Missing"
-            )
-          ),
-        }),
+        body: createFormData(),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          typeof data.detail === "string"
-            ? data.detail
-            : "Cleaning failed."
-        );
+        throw new Error(data.detail || "Cleaning failed.");
       }
 
       setResult(data);
@@ -401,15 +220,19 @@ export default function Clean({ datasetId }) {
     }
   }
 
-  // DOWNLOAD CSV REPORTS
   async function downloadReport(type) {
-    if (!datasetId || !result) return;
+    if (!uploadedFile || !result || downloading) return;
+
+    setDownloading(type);
+    setError("");
 
     try {
       const response = await fetch(
-        `${API_URL}/api/download/${encodeURIComponent(
-          datasetId
-        )}/${type}`
+        `${API_URL}/api/download-file/${type}`,
+        {
+          method: "POST",
+          body: createFormData(),
+        }
       );
 
       if (!response.ok) {
@@ -426,10 +249,8 @@ export default function Clean({ datasetId }) {
       };
 
       const link = document.createElement("a");
-
       link.href = url;
-      link.download = filenames[type] || "report.csv";
-
+      link.download = filenames[type];
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -437,22 +258,18 @@ export default function Clean({ datasetId }) {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
       setError(err.message || "Download failed.");
+    } finally {
+      setDownloading("");
     }
   }
 
-  // EMPTY STATE
-  if (!datasetId) {
+  if (!uploadedFile) {
     return (
       <div className="bg-white rounded-3xl p-12 text-center shadow-sm">
-        <Database
-          size={42}
-          className="mx-auto mb-4 text-blue-600"
-        />
-
+        <Database size={42} className="mx-auto mb-4 text-blue-600" />
         <h2 className="text-2xl font-bold text-[#172d51]">
           No Dataset Uploaded
         </h2>
-
         <p className="text-slate-500 mt-3">
           Upload a CSV file from Home to start cleaning.
         </p>
@@ -462,43 +279,33 @@ export default function Clean({ datasetId }) {
 
   return (
     <div className="space-y-7">
-      {/* HEADER */}
       <div>
         <div className="flex items-center gap-2 text-blue-600 text-xs font-bold tracking-widest mb-3">
           <WandSparkles size={18} />
           DATA PREPARATION
         </div>
-
         <h2 className="text-3xl md:text-4xl font-bold text-[#172d51]">
           Smart Data Cleaning
         </h2>
-
         <p className="text-slate-500 mt-3">
-          Review Python-generated recommendations, choose
-          cleaning methods, and prepare your dataset.
+          Review recommendations and prepare your dataset.
         </p>
       </div>
 
-      {/* ERROR MESSAGE */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-5 rounded-2xl flex items-start gap-3">
-          <AlertTriangle size={20} className="shrink-0" />
-          <span>{error}</span>
+        <div className="bg-red-50 border border-red-200 text-red-700 p-5 rounded-2xl flex gap-3">
+          <AlertTriangle size={20} />
+          {error}
         </div>
       )}
 
-      {/* CLEANING CONFIGURATION */}
       <section className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm">
-        <h3 className="text-xl font-bold text-[#172d51]">
+        <h3 className="text-xl font-bold text-[#172d51] mb-5">
           Cleaning Configuration
         </h3>
 
-        <p className="text-sm text-slate-500 mt-2 mb-6">
-          Select the operations you want to apply.
-        </p>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <label className="flex items-start gap-4 p-5 rounded-2xl bg-slate-50 cursor-pointer">
+          <label className="flex items-center gap-3 p-5 rounded-2xl bg-slate-50">
             <input
               type="checkbox"
               checked={trimSpaces}
@@ -506,21 +313,11 @@ export default function Clean({ datasetId }) {
                 setTrimSpaces(e.target.checked);
                 setResult(null);
               }}
-              className="mt-1 w-4 h-4 accent-blue-600"
             />
-
-            <div>
-              <p className="font-semibold text-[#172d51]">
-                Trim Extra Spaces
-              </p>
-
-              <p className="text-sm text-slate-500 mt-1">
-                Remove leading and trailing spaces from text.
-              </p>
-            </div>
+            <span className="font-semibold">Trim Extra Spaces</span>
           </label>
 
-          <label className="flex items-start gap-4 p-5 rounded-2xl bg-slate-50 cursor-pointer">
+          <label className="flex items-center gap-3 p-5 rounded-2xl bg-slate-50">
             <input
               type="checkbox"
               checked={removeDuplicates}
@@ -528,239 +325,98 @@ export default function Clean({ datasetId }) {
                 setRemoveDuplicates(e.target.checked);
                 setResult(null);
               }}
-              className="mt-1 w-4 h-4 accent-blue-600"
             />
-
-            <div>
-              <p className="font-semibold text-[#172d51]">
-                Remove Duplicate Rows
-              </p>
-
-              <p className="text-sm text-slate-500 mt-1">
-                Remove repeated records from the dataset.
-              </p>
-            </div>
+            <span className="font-semibold">Remove Duplicate Rows</span>
           </label>
         </div>
 
-        {/* MISSING VALUE CLEANING */}
         <div className="mt-9">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-            <div>
-              <div className="flex items-center gap-2">
-                <Sparkles
-                  size={21}
-                  className="text-blue-600"
-                />
-
-                <h3 className="text-xl font-bold text-[#172d51]">
-                  Smart Missing Value Cleaning
-                </h3>
-              </div>
-
-              <p className="text-sm text-slate-500 mt-2">
-                Review suggested methods before applying them.
-              </p>
-            </div>
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
+            <h3 className="text-xl font-bold text-[#172d51] flex items-center gap-2">
+              <Sparkles size={21} className="text-blue-600" />
+              Smart Missing Value Cleaning
+            </h3>
 
             {missingColumns.length > 0 && (
               <button
                 onClick={applyAllSuggestions}
-                disabled={preparing}
-                className="flex items-center gap-2 px-5 py-3 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl text-sm font-semibold transition"
+                className="bg-blue-50 text-blue-700 px-5 py-3 rounded-xl font-semibold"
               >
-                <Sparkles size={17} />
                 Apply All Suggestions
               </button>
             )}
           </div>
 
           {preparing ? (
-            <div className="flex items-center gap-3 p-6 bg-slate-50 rounded-2xl text-blue-600">
-              <RefreshCw
-                size={20}
-                className="animate-spin"
-              />
-              Loading Python recommendations...
-            </div>
+            <p className="text-blue-600 flex gap-2">
+              <RefreshCw className="animate-spin" />
+              Loading recommendations...
+            </p>
           ) : missingColumns.length === 0 ? (
-            <div className="bg-green-50 text-green-700 p-5 rounded-2xl flex items-center gap-3">
-              <CheckCircle2 size={20} />
+            <p className="text-slate-500">
               No missing-value columns reported.
-            </div>
+            </p>
           ) : (
             <div className="space-y-4">
-              {missingColumns.map((column, index) => {
-                const name =
-                  typeof column === "string"
-                    ? column
-                    : column.column ??
-                      column.Column ??
-                      column.name;
-
-                if (!name) return null;
-
-                const recommendation =
-                  findRecommendation(name);
-
-                const suggestedMethod =
-                  getRecommendationMethod(recommendation);
-
-                const reason =
-                  getRecommendationReason(recommendation);
-
-                const availableMethods =
-                  getAvailableMethods(
-                    typeof column === "string"
-                      ? { type: "text" }
-                      : column
-                  );
-
-                const canApply =
-                  suggestedMethod &&
-                  availableMethods.includes(suggestedMethod);
-
-                const selectedMethod =
-                  rules[name] || "Keep Missing";
-
-                const missingCount =
-                  typeof column === "object"
-                    ? column.missing
-                    : null;
+              {missingColumns.map((column) => {
+                const name = column.column;
+                const recommendation = getRecommendation(name);
+                const suggestion = getSuggestedMethod(recommendation);
+                const methods = availableMethods(column);
 
                 return (
                   <div
-                    key={`${name}-${index}`}
-                    className="bg-slate-50 border border-slate-100 rounded-2xl p-5 md:p-6"
+                    key={name}
+                    className="bg-slate-50 rounded-2xl p-5 border border-slate-100"
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      {/* COLUMN INFORMATION */}
+                    <div className="flex flex-wrap justify-between gap-4">
                       <div>
-                        <h4 className="text-lg font-bold text-[#172d51]">
+                        <h4 className="font-bold text-[#172d51]">
                           {name}
                         </h4>
-
-                        <div className="flex flex-wrap items-center gap-2 mt-3">
-                          {missingCount != null && (
-                            <span className="bg-orange-50 text-orange-700 px-3 py-1 rounded-full text-xs font-semibold">
-                              {formatNumber(missingCount)} Missing
-                            </span>
-                          )}
-
-                          {typeof column === "object" &&
-                            column.type && (
-                              <span className="bg-white border border-slate-200 text-slate-600 px-3 py-1 rounded-full text-xs font-semibold">
-                                {column.type}
-                              </span>
-                            )}
-                        </div>
+                        <p className="text-sm text-orange-700 mt-2">
+                          {column.missing} Missing · {column.type}
+                        </p>
                       </div>
 
-                      {/* METHOD SELECTOR */}
-                      <div className="w-full sm:w-52">
-                        <p className="text-xs font-semibold text-slate-500 mb-2">
-                          Cleaning Method
-                        </p>
+                      <select
+                        value={rules[name] || "Keep Missing"}
+                        onChange={(e) => {
+                          setRules((prev) => ({
+                            ...prev,
+                            [name]: e.target.value,
+                          }));
+                          setResult(null);
+                        }}
+                        className="bg-white border rounded-xl px-4 py-3"
+                      >
+                        {methods.map((method) => (
+                          <option key={method} value={method}>
+                            {method}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                        <select
-                          value={selectedMethod}
-                          onChange={(e) => {
-                            setRules((previous) => ({
-                              ...previous,
-                              [name]: e.target.value,
+                    <div className="mt-4 bg-white rounded-xl p-4">
+                      <p className="text-sm text-slate-600">
+                        Suggested Method:{" "}
+                        <strong>{suggestion || "Manual Review"}</strong>
+                      </p>
+
+                      {suggestion && methods.includes(suggestion) && (
+                        <button
+                          onClick={() => {
+                            setRules((prev) => ({
+                              ...prev,
+                              [name]: suggestion,
                             }));
                             setResult(null);
                           }}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-[#172d51]"
+                          className="mt-3 text-blue-600 font-semibold text-sm"
                         >
-                          {availableMethods.map((method) => (
-                            <option
-                              key={method}
-                              value={method}
-                            >
-                              {method}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* PYTHON RECOMMENDATION */}
-                    <div className="mt-5 bg-white border border-blue-100 rounded-2xl p-4 md:p-5">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Lightbulb
-                          size={19}
-                          className="text-blue-600"
-                        />
-
-                        <p className="text-sm font-bold text-[#172d51]">
-                          Python Cleaning Recommendation
-                        </p>
-                      </div>
-
-                      {recommendation ? (
-                        <>
-                          <div className="flex flex-wrap items-center gap-2 mb-3">
-                            <span className="text-sm text-slate-500">
-                              Suggested Method:
-                            </span>
-
-                            <span className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-bold">
-                              {suggestedMethod ||
-                                "Manual Review"}
-                            </span>
-                          </div>
-
-                          {reason && (
-                            <div className="flex items-start gap-2 text-sm text-slate-600 leading-relaxed">
-                              <Info
-                                size={16}
-                                className="shrink-0 mt-0.5 text-blue-500"
-                              />
-
-                              <p>{reason}</p>
-                            </div>
-                          )}
-
-                          {!reason && (
-                            <p className="text-sm text-slate-500">
-                              Review this column before choosing
-                              a cleaning method.
-                            </p>
-                          )}
-
-                          {canApply && (
-                            <button
-                              onClick={() =>
-                                applySuggestion(
-                                  name,
-                                  suggestedMethod
-                                )
-                              }
-                              className="mt-4 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition"
-                            >
-                              <CheckCircle2 size={16} />
-
-                              Apply Suggestion
-
-                              <ArrowRight size={16} />
-                            </button>
-                          )}
-
-                          {!canApply && (
-                            <p className="mt-3 text-xs text-amber-700">
-                              No supported automatic method was
-                              identified. Review this column
-                              manually.
-                            </p>
-                          )}
-                        </>
-                      ) : (
-                        <p className="text-sm text-slate-500">
-                          No matching Python recommendation
-                          was returned for this column.
-                          Select a method manually.
-                        </p>
+                          Apply Suggestion
+                        </button>
                       )}
                     </div>
                   </div>
@@ -770,172 +426,80 @@ export default function Clean({ datasetId }) {
           )}
         </div>
 
-        {/* RUN CLEANING BUTTON */}
-        <div className="mt-8 pt-6 border-t border-slate-100">
-          <button
-            onClick={runCleaning}
-            disabled={loading || preparing}
-            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-7 py-3.5 rounded-xl font-semibold transition"
-          >
-            {loading ? (
-              <RefreshCw
-                size={19}
-                className="animate-spin"
-              />
-            ) : (
-              <WandSparkles size={19} />
-            )}
-
-            {loading
-              ? "Cleaning Dataset..."
-              : "Run Smart Cleaning"}
-          </button>
-
-          <p className="text-xs text-slate-400 mt-3">
-            Suggestions only select methods. Cleaning starts
-            when you click Run Smart Cleaning.
-          </p>
-        </div>
+        <button
+          onClick={runCleaning}
+          disabled={loading || preparing}
+          className="mt-8 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-7 py-3.5 rounded-xl font-semibold"
+        >
+          <WandSparkles size={19} />
+          {loading ? "Cleaning Dataset..." : "Run Smart Cleaning"}
+        </button>
       </section>
 
-      {/* ORIGINAL RECOMMENDATION REPORT */}
       {recommendations.length > 0 && (
-        <section className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm">
-          <h3 className="text-xl font-bold text-[#172d51] mb-2">
+        <section className="bg-white rounded-3xl p-6 shadow-sm">
+          <h3 className="text-xl font-bold mb-5">
             Python Recommendation Report
           </h3>
-
-          <p className="text-sm text-slate-500 mb-5">
-            Original recommendations generated by your
-            Python cleaning algorithm.
-          </p>
-
-          <DataTable
-            rows={recommendations}
-            emptyMessage="No recommendations available."
-          />
+          <DataTable rows={recommendations} />
         </section>
       )}
 
-      {/* CLEANING RESULTS */}
       {result && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
-              <p className="text-sm text-slate-500">
-                Before Quality Score
-              </p>
-
-              <p className="text-3xl font-bold text-[#172d51] mt-3">
-                {formatNumber(result.before_score)}%
-              </p>
-            </div>
-
-            <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
-              <p className="text-sm text-slate-500">
-                After Quality Score
-              </p>
-
-              <p className="text-3xl font-bold text-blue-600 mt-3">
-                {formatNumber(result.after_score)}%
-              </p>
-            </div>
-
-            <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
-              <p className="text-sm text-slate-500">
-                Audit Log Entries
-              </p>
-
-              <p className="text-3xl font-bold text-[#172d51] mt-3">
-                {formatNumber(result.audit_count)}
-              </p>
-            </div>
+            {[
+              ["Before Quality Score", `${result.before_score}%`],
+              ["After Quality Score", `${result.after_score}%`],
+              ["Audit Log Entries", result.audit_count],
+            ].map(([label, value]) => (
+              <div key={label} className="bg-white rounded-3xl p-6 shadow-sm">
+                <p className="text-sm text-slate-500">{label}</p>
+                <p className="text-3xl font-bold text-[#172d51] mt-3">
+                  {value}
+                </p>
+              </div>
+            ))}
           </div>
 
-          {/* BEFORE AFTER COMPARISON */}
-          <section className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm">
-            <h3 className="text-xl font-bold text-[#172d51] mb-5">
-              Before vs After Comparison
-            </h3>
+          {[
+            ["Before vs After Comparison", result.comparison],
+            ["Cleaned Dataset Preview", result.cleaned_preview],
+            ["Cleaning Audit Log", result.audit],
+          ].map(([title, rows]) => (
+            <section key={title} className="bg-white rounded-3xl p-6 shadow-sm">
+              <h3 className="text-xl font-bold text-[#172d51] mb-5">
+                {title}
+              </h3>
+              <DataTable rows={rows} />
+            </section>
+          ))}
 
-            <DataTable
-              rows={result.comparison}
-              emptyMessage="No comparison data available."
-            />
-          </section>
-
-          {/* CLEANED DATA PREVIEW */}
-          <section className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm">
-            <h3 className="text-xl font-bold text-[#172d51] mb-5">
-              Cleaned Dataset Preview
-            </h3>
-
-            <DataTable
-              rows={result.cleaned_preview}
-              emptyMessage="No cleaned dataset preview available."
-            />
-          </section>
-
-          {/* AUDIT LOG PREVIEW */}
-          <section className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm">
-            <h3 className="text-xl font-bold text-[#172d51] mb-2">
-              Cleaning Audit Log
-            </h3>
-
-            <p className="text-sm text-slate-500 mb-5">
-              Recorded changes made during data cleaning.
-            </p>
-
-            <DataTable
-              rows={result.audit}
-              emptyMessage="No cleaning changes were recorded."
-            />
-          </section>
-
-          {/* DOWNLOAD SECTION */}
-          <section className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm">
+          <section className="bg-white rounded-3xl p-6 shadow-sm">
             <h3 className="text-xl font-bold text-[#172d51] mb-5">
               Export Cleaning Results
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
-                {
-                  label: "Cleaned Dataset",
-                  type: "cleaned",
-                },
-                {
-                  label: "Quality Report",
-                  type: "quality",
-                },
-                {
-                  label: "Audit Log",
-                  type: "audit",
-                },
-              ].map((item) => (
+                ["Cleaned Dataset", "cleaned"],
+                ["Quality Report", "quality"],
+                ["Audit Log", "audit"],
+              ].map(([label, type]) => (
                 <button
-                  key={item.type}
-                  onClick={() =>
-                    downloadReport(item.type)
-                  }
-                  className="flex items-center justify-center gap-2 bg-slate-50 hover:bg-blue-50 text-[#172d51] p-5 rounded-2xl font-semibold transition"
+                  key={type}
+                  onClick={() => downloadReport(type)}
+                  disabled={Boolean(downloading)}
+                  className="flex items-center justify-center gap-2 bg-slate-50 hover:bg-blue-50 disabled:opacity-50 p-5 rounded-2xl font-semibold"
                 >
-                  <Download
-                    size={18}
-                    className="text-blue-600"
-                  />
-
-                  {item.label}
+                  <Download size={18} className="text-blue-600" />
+                  {downloading === type ? "Downloading..." : label}
                 </button>
               ))}
             </div>
           </section>
         </>
       )}
-
-      <div className="text-center text-xs text-slate-400 pb-4">
-        DataQuality 360 • Smart Cleaning Workspace
-      </div>
     </div>
   );
 }
