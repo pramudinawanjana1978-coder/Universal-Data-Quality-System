@@ -1,6 +1,4 @@
-
 import { useEffect, useState } from "react";
-
 import {
   FileChartColumn,
   Download,
@@ -23,13 +21,10 @@ import {
   CartesianGrid,
 } from "recharts";
 
-
 const API_URL =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.PROD ? "" : "http://127.0.0.1:8000");
 
-
-// COMPACT KPI CARD
 function MetricCard({
   title,
   value,
@@ -38,21 +33,13 @@ function MetricCard({
   background = "bg-white",
 }) {
   return (
-    <div
-      className={`${background} rounded-2xl p-4 border border-slate-100 shadow-sm`}
-    >
+    <div className={`${background} rounded-2xl p-4 border border-slate-100 shadow-sm`}>
       <div className="flex items-center gap-3 mb-3">
-        <div
-          className={`w-10 h-10 shrink-0 rounded-xl ${color} flex items-center justify-center`}
-        >
+        <div className={`w-10 h-10 shrink-0 rounded-xl ${color} flex items-center justify-center`}>
           <Icon size={20} />
         </div>
-
-        <p className="text-sm font-semibold text-slate-600">
-          {title}
-        </p>
+        <p className="text-sm font-semibold text-slate-600">{title}</p>
       </div>
-
       <p className="text-2xl font-bold text-[#172d51]">
         {value ?? "—"}
       </p>
@@ -60,14 +47,9 @@ function MetricCard({
   );
 }
 
-// REPORT TABLE
 function ReportTable({ rows, emptyMessage }) {
   if (!Array.isArray(rows) || rows.length === 0) {
-    return (
-      <p className="text-sm text-slate-500 py-5">
-        {emptyMessage}
-      </p>
-    );
+    return <p className="text-sm text-slate-500 py-5">{emptyMessage}</p>;
   }
 
   const columns = Object.keys(rows[0]);
@@ -78,30 +60,18 @@ function ReportTable({ rows, emptyMessage }) {
         <thead className="bg-slate-50">
           <tr>
             {columns.map((column) => (
-              <th
-                key={column}
-                className="p-3 text-slate-600 font-semibold whitespace-nowrap"
-              >
+              <th key={column} className="p-3 text-slate-600 font-semibold whitespace-nowrap">
                 {column}
               </th>
             ))}
           </tr>
         </thead>
-
         <tbody>
           {rows.map((row, index) => (
-            <tr
-              key={index}
-              className="border-b border-slate-100"
-            >
+            <tr key={index} className="border-b border-slate-100">
               {columns.map((column) => (
-                <td
-                  key={column}
-                  className="p-3 text-slate-600 whitespace-nowrap"
-                >
-                  {row[column] == null
-                    ? "—"
-                    : String(row[column])}
+                <td key={column} className="p-3 text-slate-600 whitespace-nowrap">
+                  {row[column] == null ? "—" : String(row[column])}
                 </td>
               ))}
             </tr>
@@ -112,20 +82,19 @@ function ReportTable({ rows, emptyMessage }) {
   );
 }
 
-export default function Reports({ datasetId, data }) {
+export default function Reports({ datasetId, data, uploadedFile }) {
   const [validation, setValidation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [downloadError, setDownloadError] = useState("");
   const [downloading, setDownloading] = useState("");
 
-  // LOAD VALIDATION RESULTS
   useEffect(() => {
     setValidation(null);
     setError("");
     setDownloadError("");
 
-    if (!datasetId) {
+    if (!uploadedFile) {
       setLoading(false);
       return;
     }
@@ -134,65 +103,64 @@ export default function Reports({ datasetId, data }) {
 
     async function fetchValidation() {
       setLoading(true);
-
       try {
-        const response = await fetch(
-          `${API_URL}/api/validate/${encodeURIComponent(datasetId)}`,
-          { signal: controller.signal }
-        );
+        const formData = new FormData();
+        formData.append("file", uploadedFile);
+
+        const response = await fetch(`${API_URL}/api/validate-file`, {
+          method: "POST",
+          body: formData,
+          signal: controller.signal,
+        });
+
+        const result = await response.json().catch(() => ({}));
 
         if (!response.ok) {
           throw new Error(
-            "Could not load validation results."
+            typeof result.detail === "string"
+              ? result.detail
+              : "Could not load validation results."
           );
         }
 
-        const result = await response.json();
-
-        if (!controller.signal.aborted) {
-          setValidation(result);
-        }
+        if (!controller.signal.aborted) setValidation(result);
       } catch (err) {
         if (!controller.signal.aborted) {
-          setError(
-            err.message || "Unable to load validation report."
-          );
+          setError(err.message || "Unable to load validation report.");
         }
       } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
 
     fetchValidation();
-
     return () => controller.abort();
-  }, [datasetId]);
+  }, [uploadedFile]);
 
-  // DOWNLOAD FILE FROM BACKEND
   async function downloadFile(type) {
-    if (!datasetId || downloading) return;
+    if (!uploadedFile || downloading) return;
 
     setDownloadError("");
     setDownloading(type);
 
     try {
+      const formData = new FormData();
+      formData.append("file", uploadedFile);
+
       const response = await fetch(
-        `${API_URL}/api/download/${encodeURIComponent(
-          datasetId
-        )}/${type}`
+        `${API_URL}/api/download-file/${type}`,
+        {
+          method: "POST",
+          body: formData,
+        }
       );
 
       if (!response.ok) {
-        const details = await response
-          .json()
-          .catch(() => ({}));
-
+        const details = await response.json().catch(() => ({}));
         throw new Error(
           typeof details.detail === "string"
             ? details.detail
-            : "Report is unavailable. Run Smart Cleaning first."
+            : `Unable to download ${type} report.`
         );
       }
 
@@ -208,22 +176,18 @@ export default function Reports({ datasetId, data }) {
       const link = document.createElement("a");
       link.href = url;
       link.download = names[type] || "report.csv";
-
       document.body.appendChild(link);
       link.click();
       link.remove();
 
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
-      setDownloadError(
-        err.message || "Download failed."
-      );
+      setDownloadError(err.message || "Download failed.");
     } finally {
       setDownloading("");
     }
   }
 
-  // EXPORT SUMMARY CSV
   function exportSummary() {
     if (!data) return;
 
@@ -240,10 +204,7 @@ export default function Reports({ datasetId, data }) {
     const csv = rows
       .map((row) =>
         row
-          .map((value) => {
-            const text = String(value).replace(/"/g, '""');
-            return `"${text}"`;
-          })
+          .map((value) => `"${String(value).replace(/"/g, '""')}"`)
           .join(",")
       )
       .join("\r\n");
@@ -265,19 +226,13 @@ export default function Reports({ datasetId, data }) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  // EMPTY STATE
-  if (!datasetId || !data) {
+  if (!uploadedFile || !data) {
     return (
       <div className="bg-white rounded-2xl p-12 text-center shadow-sm">
-        <Database
-          size={40}
-          className="mx-auto mb-4 text-blue-600"
-        />
-
+        <Database size={40} className="mx-auto mb-4 text-blue-600" />
         <h2 className="text-2xl font-bold text-[#172d51]">
           No Dataset Available
         </h2>
-
         <p className="text-slate-500 mt-3">
           Upload a CSV dataset from Home to generate reports.
         </p>
@@ -285,14 +240,11 @@ export default function Reports({ datasetId, data }) {
     );
   }
 
-  // REPORT DATA
   const missingChart = Array.isArray(data.column_missing)
     ? data.column_missing
     : [];
 
-  const issueSummary = Array.isArray(
-    validation?.issue_summary
-  )
+  const issueSummary = Array.isArray(validation?.issue_summary)
     ? validation.issue_summary
     : [];
 
@@ -301,32 +253,28 @@ export default function Reports({ datasetId, data }) {
   const reports = [
     {
       title: "Data Quality Summary",
-      description:
-        "Dataset overview, missing values, duplicates and quality score.",
+      description: "Dataset overview, missing values, duplicates and quality score.",
       icon: FileChartColumn,
       action: exportSummary,
       loading: false,
     },
     {
       title: "Cleaned Dataset",
-      description:
-        "Download the processed dataset after running Smart Cleaning.",
+      description: "Download the processed dataset after running Smart Cleaning.",
       icon: FileSpreadsheet,
       action: () => downloadFile("cleaned"),
       loading: downloading === "cleaned",
     },
     {
       title: "Quality Report",
-      description:
-        "Download the column-level quality report.",
+      description: "Download the column-level quality report.",
       icon: ShieldCheck,
       action: () => downloadFile("quality"),
       loading: downloading === "quality",
     },
     {
       title: "Cleaning Audit Log",
-      description:
-        "Review the recorded changes made during cleaning.",
+      description: "Review the recorded changes made during cleaning.",
       icon: ClipboardList,
       action: () => downloadFile("audit"),
       loading: downloading === "audit",
@@ -335,8 +283,6 @@ export default function Reports({ datasetId, data }) {
 
   return (
     <div className="space-y-5 pb-5">
-
-      {/* PAGE HEADER */}
       <div>
         <div className="flex items-center gap-2 text-blue-600 text-xs font-bold tracking-widest mb-2">
           <FileChartColumn size={17} />
@@ -353,16 +299,11 @@ export default function Reports({ datasetId, data }) {
         </p>
 
         <div className="flex items-center gap-2 text-sm text-slate-500 mt-3">
-          <FileSpreadsheet
-            size={17}
-            className="text-blue-600"
-          />
-
+          <FileSpreadsheet size={17} className="text-blue-600" />
           {data.filename || "Uploaded Dataset"}
         </div>
       </div>
 
-      {/* COMPACT KPI CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <MetricCard
           title="Total Records"
@@ -370,43 +311,31 @@ export default function Reports({ datasetId, data }) {
           icon={Database}
           color="bg-blue-50 text-blue-600"
         />
-
         <MetricCard
           title="Missing Values"
           value={data.missing_values ?? "—"}
           icon={AlertTriangle}
           color="bg-orange-50 text-orange-600"
         />
-
         <MetricCard
           title="Duplicate Rows"
           value={data.duplicates ?? "—"}
           icon={FileSpreadsheet}
           color="bg-violet-50 text-violet-600"
         />
-
         <MetricCard
           title="Quality Score"
-          value={
-            data.quality_score != null
-              ? `${data.quality_score}%`
-              : "—"
-          }
+          value={data.quality_score != null ? `${data.quality_score}%` : "—"}
           icon={CheckCircle2}
           color="bg-green-50 text-green-600"
         />
       </div>
 
-      {/* MISSING VALUES CHART */}
       <section className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-            <FileChartColumn
-              size={20}
-              className="text-blue-600"
-            />
+            <FileChartColumn size={20} className="text-blue-600" />
           </div>
-
           <h3 className="text-lg font-bold text-[#172d51]">
             Missing Values by Column
           </h3>
@@ -418,16 +347,9 @@ export default function Reports({ datasetId, data }) {
 
         {missingChart.length > 0 ? (
           <div className="w-full h-72">
-            <ResponsiveContainer
-              width="100%"
-              height="100%"
-            >
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={missingChart}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                />
-
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="column"
                   tick={{ fontSize: 11 }}
@@ -436,11 +358,8 @@ export default function Reports({ datasetId, data }) {
                   textAnchor="end"
                   height={70}
                 />
-
                 <YAxis allowDecimals={false} />
-
                 <Tooltip />
-
                 <Bar
                   dataKey="missing"
                   fill="#3478ef"
@@ -456,16 +375,11 @@ export default function Reports({ datasetId, data }) {
         )}
       </section>
 
-      {/* VALIDATION SUMMARY */}
       <section className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
         <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-            <ShieldCheck
-              size={20}
-              className="text-blue-600"
-            />
+            <ShieldCheck size={20} className="text-blue-600" />
           </div>
-
           <h3 className="text-lg font-bold text-[#172d51]">
             Validation Summary
           </h3>
@@ -473,10 +387,7 @@ export default function Reports({ datasetId, data }) {
 
         {loading ? (
           <div className="flex items-center gap-2 text-blue-600">
-            <RefreshCw
-              size={18}
-              className="animate-spin"
-            />
+            <RefreshCw size={18} className="animate-spin" />
             Loading validation results...
           </div>
         ) : error ? (
@@ -492,7 +403,6 @@ export default function Reports({ datasetId, data }) {
                 background="bg-slate-50"
               />
             </div>
-
             <ReportTable
               rows={issueSummary}
               emptyMessage="No validation issue categories reported."
@@ -501,16 +411,11 @@ export default function Reports({ datasetId, data }) {
         )}
       </section>
 
-      {/* EXPORT REPORTS */}
       <section className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-            <Download
-              size={20}
-              className="text-blue-600"
-            />
+            <Download size={20} className="text-blue-600" />
           </div>
-
           <h3 className="text-lg font-bold text-[#172d51]">
             Export Reports
           </h3>
@@ -540,17 +445,12 @@ export default function Reports({ datasetId, data }) {
                 <div>
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
-                      <Icon
-                        size={20}
-                        className="text-blue-600"
-                      />
+                      <Icon size={20} className="text-blue-600" />
                     </div>
-
                     <h4 className="font-bold text-[#172d51]">
                       {report.title}
                     </h4>
                   </div>
-
                   <p className="text-sm text-slate-500">
                     {report.description}
                   </p>
@@ -558,21 +458,15 @@ export default function Reports({ datasetId, data }) {
 
                 <button
                   onClick={report.action}
-                  disabled={Boolean(downloading)}
+                  disabled={Boolean(downloading) || (!uploadedFile && report.title !== "Data Quality Summary")}
                   className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-5 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold transition"
                 >
                   {report.loading ? (
-                    <RefreshCw
-                      size={17}
-                      className="animate-spin"
-                    />
+                    <RefreshCw size={17} className="animate-spin" />
                   ) : (
                     <Download size={17} />
                   )}
-
-                  {report.loading
-                    ? "Downloading..."
-                    : "Download CSV"}
+                  {report.loading ? "Downloading..." : "Download CSV"}
                 </button>
               </div>
             );
@@ -580,7 +474,6 @@ export default function Reports({ datasetId, data }) {
         </div>
       </section>
 
-      {/* FOOTER */}
       <p className="text-center text-xs text-slate-400 pb-4">
         DataQuality 360 • Reporting Workspace
       </p>
