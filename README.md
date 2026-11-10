@@ -1,110 +1,181 @@
-# Universal Data Quality System
 
-A Python and Streamlit-based web application designed to automate data quality assessment, validation, cleaning, visualization, and reporting.
+# 📊 DataQuality 360
+### Automated Data Quality Analysis & Cleaning Platform
 
-## Project Overview
+A web-based data quality management application designed to help users identify, analyze, and resolve common data quality issues in CSV datasets.
 
-The Universal Data Quality System helps users identify potential data quality issues in CSV datasets, apply selected cleaning operations, and evaluate the results through interactive visualizations and reports.
+DataQuality 360 provides interactive data profiling, validation, cleaning, visualizations, and downloadable reports through a modern dashboard.
 
-The application supports transparent data cleaning by maintaining an audit log of recorded changes.
+## 🌐 Live Demo
 
-## Key Features
+**[Launch DataQuality 360](https://universal-data-quality-system.vercel.app)**
 
-- **Data Profiling:** Analyze dataset dimensions, missing values, duplicates, and column data types.
-- **Data Quality Score:** Calculate an illustrative quality score based on completeness (70%) and row uniqueness (30%).
-- **Data Validation:** Flag potentially invalid emails, dates, negative numeric values, and duplicate IDs.
-- **Validation Filtering:** Filter detected issues by issue type.
-- **Outlier Detection:** Identify potential numeric outliers using the Interquartile Range (IQR) method.
-- **Smart Missing Value Cleaning:** Apply Mean, Median, Mode, Unknown, or Keep Missing options.
-- **Duplicate Removal:** Optionally remove exact duplicate rows.
-- **Whitespace Cleaning:** Remove unnecessary leading and trailing spaces.
-- **Before and After Analysis:** Compare data quality metrics and numeric distributions.
-- **Cleaning Audit Log:** Track recorded cleaning changes.
-- **Report Generation:** Export cleaned datasets, quality reports, audit logs, and PDF assessment reports.
+## 🎯 Project Objectives
 
-## Technologies Used
+- Simplify the data cleaning process.
+- Identify missing, invalid, and duplicate records.
+- Provide meaningful data quality insights.
+- Support configurable data cleaning.
+- Generate downloadable quality reports.
+- Maintain transparency through cleaning audit logs.
 
-- Python
-- Pandas
-- Streamlit
-- Plotly
-- ReportLab
-- HTML/CSS
+## ✨ Key Features
 
-## Project Structure
+### 1. CSV Dataset Upload
+- Upload CSV files.
+- Preview dataset records.
+- Explore column information and dataset structure.
+
+### 2. Data Quality Dashboard
+- Total records and columns.
+- Missing value analysis.
+- Duplicate record analysis.
+- Interactive data visualizations.
+
+### 3. Data Validation
+- Identify potential data quality issues.
+- Review validation summaries.
+- Explore issues requiring attention.
+
+### 4. Smart Data Cleaning
+- Apply supported data cleaning operations.
+- Handle missing values.
+- Review cleaned data.
+
+### 5. Data Quality Reports
+- Data quality summary.
+- Cleaned dataset export.
+- Quality report download.
+- Cleaning audit log download.
+
+## 🛠️ Technology Stack
+
+| Component | Technology |
+|---|---|
+| Frontend | React.js, Vite |
+| Styling | Tailwind CSS |
+| Backend | Python, FastAPI |
+| Data Processing | Pandas, NumPy |
+| Data Visualization | Recharts |
+| API Communication | REST APIs |
+| Version Control | Git, GitHub |
+| Deployment | Vercel |
+
+## 🏗️ System Architecture
 
 ```text
-Data-Quality-Automation/
-├── universal_app.py
-├── universal_cleaner.py
-├── pdf_report.py
-├── styles.css
-├── requirements.txt
-└── README.md
+           User
+             |
+             v
+    React + Vite Frontend
+             |
+             v
+       FastAPI REST API
+             |
+             v
+     Python Data Processing
+       (Pandas / NumPy)
+             |
+             v
+   Validation & Data Cleaning
+             |
+             v
+   Reports & CSV Downloads
 ```
 
-## Installation and Setup
+## 🔄 Application Workflow
 
-**1. Clone the repository**
+1. Upload a CSV dataset.
+2. Preview and analyze the dataset.
+3. Identify data quality problems.
+4. Apply supported cleaning operations.
+5. Review validation results.
+6. Download reports and processed data.
+
+## 📸 Application Screenshots
+
+Screenshots will be added here.
+
+Suggested screenshots:
+- Dashboard Overview
+- Dataset Preview
+- Data Validation
+- Smart Data Cleaning
+- Reports & Downloads
+
+## 💻 Running Locally
+
+### Prerequisites
+
+- Node.js
+- Python 3.11+
+- npm
+
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/pramudinawanjana1978-coder/Universal-Data-Quality-System.git
-```
-
-**2. Navigate to the project folder**
-
-```bash
 cd Universal-Data-Quality-System
 ```
 
-**3. Install the required packages**
+### 2. Start the Backend
+
+Install the Python dependencies defined in `pyproject.toml`.
 
 ```bash
-python -m pip install -r requirements.txt
+pip install -e .
+uvicorn backend.main:app --reload
 ```
 
-**4. Run the Streamlit application**
+### 3. Start the Frontend
 
 ```bash
-python -m streamlit run universal_app.py
+cd frontend
+npm install
 ```
 
-## How to Use
+Create a `.env` file inside `frontend`:
 
-1. Upload a CSV dataset.
-2. Review the dataset overview and quality score.
-3. Examine validation issues and potential outliers.
-4. Select suitable cleaning options.
-5. Run the cleaning process.
-6. Compare the original and cleaned datasets.
-7. Download the cleaned dataset and assessment reports.
+```env
+VITE_API_URL=http://127.0.0.1:8000
+```
 
-## Important Notes
+Start the application:
 
-- The quality score is an illustrative metric, not an industry-standard certification.
-- Flagged negative values and statistical outliers are not necessarily errors.
-- Cleaning operations should be reviewed before using the results for business decisions.
-- The application does not automatically delete potential outliers.
+```bash
+npm run dev
+```
 
-## Project Purpose
+Open the local URL displayed in your terminal.
 
-This project was developed to demonstrate practical skills in Python programming, data validation, data cleaning, exploratory data analysis, interactive visualization, and automated reporting.
+## 📚 Skills Demonstrated
 
+- Data Cleaning and Preprocessing
+- Data Quality Validation
+- Exploratory Data Analysis
+- Python Data Processing
+- REST API Integration
+- Interactive Data Visualization
+- React Frontend Development
+- Full-Stack Application Deployment
+- Git and GitHub
 
+## 🔮 Future Improvements
 
-## Application Screenshots
+- Support Excel file uploads.
+- Add more advanced data validation rules.
+- Introduce configurable outlier detection.
+- Support larger datasets.
+- Add downloadable PDF reports.
+- Improve data quality trend analysis.
 
-### Dashboard Overview
+## 👩‍💻 Developer
 
-![Dashboard Overview](dashboard_overview.png)
+**Pramudi N.**
 
-### Missing Values Analysis
+BSc (Hons) Computer Science & Technology  
+Sabaragamuwa University of Sri Lanka
 
-![Missing Values Analysis](missing_values_analysis.png)
+## 📄 Project Status
 
-
-## Author
-
-Pramudi Nawanjana
-
-GitHub: https://github.com/pramudinawanjana1978-coder
+Portfolio project — deployed on Vercel, with ongoing testing and improvements.
