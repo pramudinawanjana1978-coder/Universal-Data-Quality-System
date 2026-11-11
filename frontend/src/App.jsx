@@ -215,10 +215,6 @@ export default function App() {
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 bg-white border border-slate-100 rounded-full px-4 py-2 text-sm text-slate-500">
-          <span className="w-2 h-2 rounded-full bg-green-500" />
-          Workspace
-        </div>
       </header>
 
       {/* MAIN CONTENT */}
