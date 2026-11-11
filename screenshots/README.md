@@ -1,3 +1,17 @@
 Dashboard screenshots
-<img width="1877" height="1017" alt="missing_values_analysis" src="https://github.com/user-attachments/assets/eec84511-2205-4371-9a3e-b2bab38ef400" />
-<img width="1906" height="1090" alt="dashboard_overview" src="https://github.com/user-attachments/assets/36500c30-a9b2-4fe5-9833-18407a6e2212" />
+## 📸 Application Screenshots
+
+### Dashboard Overview
+<img width="100%" alt="Dashboard Overview" src="YOUR_NEW_IMAGE_URL" />
+
+### Data Profiling
+<img width="100%" alt="Data Profiling" src="YOUR_PROFILE_IMAGE_URL" />
+
+### Data Validation
+<img width="100%" alt="Data Validation" src="YOUR_VALIDATION_IMAGE_URL" />
+
+### Smart Data Cleaning
+<img width="100%" alt="Smart Cleaning" src="YOUR_CLEANING_IMAGE_URL" />
+
+### Reports & Downloads
+<img width="100%" alt="Reports" src="YOUR_REPORTS_IMAGE_URL" />
